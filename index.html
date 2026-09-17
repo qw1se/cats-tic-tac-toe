@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Кошачьи крестики-нолики</title>
+  <style>
+    :root {
+      --bg: #fff8f1;
+      --panel: #fff;
+      --border: #d9c2a7;
+      --text: #3a2e2a;
+      --accent: #9c6b4d;
+      --winner: #ffd166;
+      --black-cat: #111111;
+      --white-cat: #f5f5f5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #fff6ea, #f7efe9);
+      font-family: Arial, sans-serif;
+      color: var(--text);
+    }
+
+    .game {
+      background: var(--panel);
+      border: 3px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      width: min(90vw, 420px);
+    }
+
+    .status {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      min-height: 28px;
+      margin-bottom: 16px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .cell {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      background: #fffaf6;
+      font-size: clamp(2rem, 7vw, 3.4rem);
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+      user-select: none;
+    }
+
+    .cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+      background: #fff;
+    }
+
+    .cell:disabled {
+      cursor: default;
+    }
+
+    .black-cat {
+      color: var(--black-cat);
+      text-shadow: 0 0 1px rgba(0,0,0,0.6);
+    }
+
+    .white-cat {
+      color: var(--white-cat);
+      text-shadow:
+        0 0 1px rgba(0,0,0,0.9),
+        0 0 4px rgba(0,0,0,0.25);
+      background: #f0f0f0;
+    }
+
+    .winner {
+      background: var(--winner);
+      border-color: #d9a400;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .reset-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.12s ease;
+    }
+
+    .reset-btn:hover {
+      opacity: 0.95;
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div id="status" class="status">Ход черной кошки 🐈‍⬛</div>
+
+    <div class="board" id="board">
+      <button class="cell" data-index="0" aria-label="Клетка 1"></button>
+      <button class="cell" data-index="1" aria-label="Клетка 2"></button>
+      <button class="cell" data-index="2" aria-label="Клетка 3"></button>
+      <button class="cell" data-index="3" aria-label="Клетка 4"></button>
+      <button class="cell" data-index="4" aria-label="Клетка 5"></button>
+      <button class="cell" data-index="5" aria-label="Клетка 6"></button>
+      <button class="cell" data-index="6" aria-label="Клетка 7"></button>
+      <button class="cell" data-index="7" aria-label="Клетка 8"></button>
+      <button class="cell" data-index="8" aria-label="Клетка 9"></button>
+    </div>
+
+    <div class="controls">
+      <button id="resetBtn" class="reset-btn">Новая игра</button>
+    </div>
+  </div>
+
+  <script>
+    const cells = Array.from(document.querySelectorAll('.cell'));
+    const statusEl = document.getElementById('status');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const winPatterns = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6]
+    ];
+
+    let board = Array(9).fill('');
+    let currentPlayer = 'black';
+    let gameOver = false;
+
+    function renderStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function getCatSymbol(player) {
+      return player === 'black' ? '🐈‍⬛' : '🐈';
+    }
+
+    function getPlayerName(player) {
+      return player === 'black' ? 'черной кошки' : 'белой кошки';
+    }
+
+    function checkWinner() {
+      for (const pattern of winPatterns) {
+        const [a, b, c] = pattern;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return pattern;
+        }
+      }
+      return null;
+    }
+
+    function highlightWinner(pattern) {
+      pattern.forEach(index => {
+        cells[index].classList.add('winner');
+      });
+    }
+
+    function makeMove(index) {
+      if (gameOver || board[index]) return;
+
+      board[index] = currentPlayer;
+      const cell = cells[index];
+      const cat = getCatSymbol(currentPlayer);
+
+      cell.textContent = cat;
+      cell.classList.add(currentPlayer === 'black' ? 'black-cat' : 'white-cat');
+      cell.disabled = true;
+
+      const winnerPattern = checkWinner();
+      if (winnerPattern) {
+        highlightWinner(winnerPattern);
+        renderStatus(`Победа ${getPlayerName(currentPlayer)}!`);
+        gameOver = true;
+        return;
+      }
+
+      if (board.every(cellValue => cellValue !== '')) {
+        renderStatus('Ничья! 🐾');
+        gameOver = true;
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+      renderStatus(`Ход ${getPlayerName(currentPlayer)} ${getCatSymbol(currentPlayer)}`);
+    }
+
+    function resetGame() {
+      board = Array(9).fill('');
+      currentPlayer = 'black';
+      gameOver = false;
+
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.disabled = false;
+        cell.classList.remove('black-cat', 'white-cat', 'winner');
+      });
+
+      renderStatus('Ход черной кошки 🐈‍⬛');
+    }
+
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => {
+        makeMove(Number(cell.dataset.index));
+      });
+    });
+
+    resetBtn.addEventListener('click', resetGame);
+
+    renderStatus('Ход черной кошки 🐈‍⬛');
+  </script>
+</body>
+</html>
